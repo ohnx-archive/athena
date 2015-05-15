@@ -1,0 +1,93 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Athena Web Control</title>
+    <link rel="stylesheet" href="css/foundation.css" />
+    <script src="js/vendor/modernizr.js"></script>
+  </head>
+  <body>
+<body>
+    
+    <div class="row">
+      <div class="large-12 columns">
+        <h1>Athena Web control</h1>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="large-12 columns">
+      	<div class="panel">
+	        <h3>Welcome to Athena Web control.</h3>
+	        <p>Click any one of the buttons below to perform the command specified.</p>
+	        <p>You will need to verify yourself first by using the form below:</p>
+	        <div class="row">
+	        	<div class="large-4 medium-4 columns">
+	    		<p><a href="http://foundation.zurb.com/docs">Foundation Documentation</a><br>Everything you need to know about using the framework.</p>
+	    	</div>
+	        	<div class="large-4 medium-4 columns">
+	        		<p><a href="http://github.com/zurb/foundation">Foundation on Github</a><br>Latest code, issue reports, feature requests and more.</p>
+	        	</div>
+	        	<div class="large-4 medium-4 columns">
+	        		<p><a href="http://twitter.com/foundationzurb">@foundationzurb</a><br>Ping us on Twitter if you have questions. If you build something with this we'd love to see it (and send you a totally boss sticker).</p>
+	        	</div>        
+					</div>
+      	</div>
+      </div>
+    </div>
+	<div class="row">
+	<div class="large-8 medium-8 columns">
+	<h2>Logs</h2>
+	The following logs are available:
+	<div id="ullist">Click on "Refresh log list" to refresh the list.</div>
+	<div id="viewer" class="panel"></div>
+	<br />
+	</div>
+	<div class="large-4 medium-4 columns">
+	<h2>Control Panel</h2>
+	<a href="#" id="list" class="small radius button">Refresh log list</a><br />
+	<a href="#" id="list" class="small radius button">Bot Status</a>On is 0:
+	<div id="statusd"></div><br />
+	<a href="#" id="start" class="small success radius button">Start Bot</a>
+	<a href="#" id="stop" class="small alert radius button">Stop Bot</a><br />
+	<a href="#" id="quit" class="small alert radius button">Stop Bot (and web server)</a>
+	</div>
+	</div>
+    <script src="js/vendor/jquery.js"></script>
+    <script src="js/foundation.min.js"></script>
+    <script>
+	$(document).ready(function() {
+		//Foundation
+		$(document).foundation();
+		//Refresh Logs
+		$.ajax({url: "list", success: function(result){$("#ullist").html(result);}});
+		//Link handlers
+		$("#status").click(function(){$.ajax({url: "status", success: function(result){$("#statusd").html(result);}});});
+		$("#list").click(function(){$.ajax({url: "list", success: function(result){$("#ullist").html(result);}});});
+		$("#start").click(function(){$.ajax({url: "start", success: function(data, status){}, error: function(){alert("Started!");}, timeout: 500});});
+		$("#stop").click(function(){$.ajax({url: "stop", success: function(data, status){}, error: function(){alert("Stopped!");}, timeout: 500});});
+		$("#quit").click(function(){$.ajax({url: "quit", success: function(data, status){}, error: function(){alert("Quit!");location.reload();}, timeout: 500});});
+		//Refresh
+		var old = "", logFile = "", refresh = function(){}, to;    
+		refresh = function(){
+			$.get(logFile, function(data, status){
+				if(old!=data) {
+					$("#viewer").html(old.replace(/\n/g, "<br />")+"<span style='color: red;'>"+data.replace(old,"").replace(/\n/g, "<br />")+"</span>");
+					old=data;
+				}
+			});
+			to = setTimeout(refresh, 1000);
+		};
+		
+		//Generated link handlers
+		$(document).on("click", "a.loglink", function() { 
+			logFile = this.id;
+			clearTimeout(to);
+			$.ajax({url: logFile,success: function(data){old=data;$("#viewer").html(data.replace(/\n/g, "<br />"));},timeout: 500});
+			to = setTimeout(refresh, 1000);
+		});
+	});
+    </script>
+  </body>
+</html>
