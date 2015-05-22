@@ -20,17 +20,31 @@
 
     <section class="main-content">
       <h1>
-<a id="what-is-athena" class="anchor" href="#what-is-athena" aria-hidden="true"><span class="octicon octicon-link"></span></a>What is athena?</h1>
+<a id="athena" class="anchor" href="#athena" aria-hidden="true"><span class="octicon octicon-link"></span></a>athena</h1>
 
-<p>Athena is an IRC bot written in C.<br />
-I used it to try and understand networking and processes in C.<br />
-There are two main parts to it: the web server and the IRC bot.<br />
-Athena exercises two things: back-end and front-end development.<br />
-The front end is the HTML and Javascript/jQuery log viewer.<br />
-The backend is the actual C webserver.<br />
-Feel free to poke around the code.<br />
-I have tried to add as many useful comments where I know what's going on.<br />
-More info will be added later.</p>
+<h2>
+<a id="what-is-athena" class="anchor" href="#what-is-athena" aria-hidden="true"><span class="octicon octicon-link"></span></a>what is athena?</h2>
+
+<p>Athena is an IRC bot written in C.
+I used it to try and understand networking and processes in C.
+There are two main parts to it: the web server and the IRC bot.
+Feel free to poke around the code.
+I have tried to add as many useful comments where I know what's going on.</p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>installation</h2>
+
+<p><strong>athena only supports linux!</strong> I don't know if it can compile on other things (eg Windows/Mac OS), but you sure can try. I won't be able to help, though.</p>
+
+<p>Try running <code>git clone https://github.com/ohnx/athena.git</code>, making config changes as necessary in athenabot.c, then running <code>gcc athenabot.c -o athenabot</code>.
+If there are any errors, then please create an issue with the compilation error, or try to fix it yourself. I have included a few comments here and there that hopefully explain what thing do.</p>
+
+<h2>
+<a id="help" class="anchor" href="#help" aria-hidden="true"><span class="octicon octicon-link"></span></a>help</h2>
+
+<p>Run the command <code>help</code> if you want help. Try a command out if you don't know what it does, but for the most part, it shouldn't be too difficult to guess what a command does.</p>
+
+<p>Naturally, admin commands can only be run by the owner (specified in the configuration at the top of the file).</p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/ohnx/athena">Athena</a> is maintained by <a href="https://github.com/ohnx">ohnx</a>.</span>
