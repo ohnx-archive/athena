@@ -6,13 +6,32 @@
     <title>Athena Web Control</title>
     <link rel="stylesheet" href="css/foundation.css" />
     <script src="js/vendor/modernizr.js"></script>
+	<script src="js/vendor/sha512.js"></script>
+    <style>
+    .botup {
+		border-radius: 50%;
+		width: 50px;
+		height: 50px;
+		background-color:#00ff00;
+		/* width and height can be anything, as long as they're equal */
+	}
+	.botdown {
+		border-radius: 50%;
+		width: 50px;
+		height: 50px;
+		background-color:#ff0000;
+		/* width and height can be anything, as long as they're equal */
+	}
+    </style>
   </head>
   <body>
-<body>
     
     <div class="row">
-      <div class="large-12 columns">
+      <div class="large-8 medium-8 columns">
         <h1>Athena Web control</h1>
+      </div>
+      <div class="large-4 medium-4 columns" style="float:right;margin-top: 10px;">
+	<h3><a href="#" id="status" class="" style="flot:right;"><div id="statusd" style="float:right;">Bot status</div></a><br /></h3>
       </div>
     </div>
     
@@ -21,18 +40,15 @@
       	<div class="panel">
 	        <h3>Welcome to Athena Web control.</h3>
 	        <p>Click any one of the buttons below to perform the command specified.</p>
-	        <p>You will need to verify yourself first by using the form below:</p>
-	        <div class="row">
-	        	<div class="large-4 medium-4 columns">
-	    		<p><a href="http://foundation.zurb.com/docs">Foundation Documentation</a><br>Everything you need to know about using the framework.</p>
-	    	</div>
-	        	<div class="large-4 medium-4 columns">
-	        		<p><a href="http://github.com/zurb/foundation">Foundation on Github</a><br>Latest code, issue reports, feature requests and more.</p>
-	        	</div>
-	        	<div class="large-4 medium-4 columns">
-	        		<p><a href="http://twitter.com/foundationzurb">@foundationzurb</a><br>Ping us on Twitter if you have questions. If you build something with this we'd love to see it (and send you a totally boss sticker).</p>
-	        	</div>        
-					</div>
+	        <p>Type the password then click one of the control buttons</p>
+				      <div class="row collapse">
+				        <div class="small-3 columns">
+				          <span class="prefix">Password</span>
+				        </div>
+				        <div class="small-9 columns">
+				          <input type="password" placeholder="Password here" id="pwdbox"/>
+				        </div>
+				      </div>
       	</div>
       </div>
     </div>
@@ -41,14 +57,13 @@
 	<h2>Logs</h2>
 	The following logs are available:
 	<div id="ullist">Click on "Refresh log list" to refresh the list.</div>
+	<div id="logname">Click a log to view it.<a href=""></a></div>
 	<div id="viewer" class="panel"></div>
 	<br />
 	</div>
-	<div class="large-4 medium-4 columns">
+	<div class="large-4 medium-4 columns panel">
 	<h2>Control Panel</h2>
 	<a href="#" id="list" class="small radius button">Refresh log list</a><br />
-	<a href="#" id="list" class="small radius button">Bot Status</a>On is 0:
-	<div id="statusd"></div><br />
 	<a href="#" id="start" class="small success radius button">Start Bot</a>
 	<a href="#" id="stop" class="small alert radius button">Stop Bot</a><br />
 	<a href="#" id="quit" class="small alert radius button">Stop Bot (and web server)</a>
@@ -63,17 +78,17 @@
 		//Refresh Logs
 		$.ajax({url: "list", success: function(result){$("#ullist").html(result);}});
 		//Link handlers
-		$("#status").click(function(){$.ajax({url: "status", success: function(result){$("#statusd").html(result);}});});
+		$("#status").click(function(){$.ajax({url: "status", success: function(result){$("#statusd").removeClass().empty().addClass(result);}});});
 		$("#list").click(function(){$.ajax({url: "list", success: function(result){$("#ullist").html(result);}});});
-		$("#start").click(function(){$.ajax({url: "start", success: function(data, status){}, error: function(){alert("Started!");}, timeout: 500});});
-		$("#stop").click(function(){$.ajax({url: "stop", success: function(data, status){}, error: function(){alert("Stopped!");}, timeout: 500});});
-		$("#quit").click(function(){$.ajax({url: "quit", success: function(data, status){}, error: function(){alert("Quit!");location.reload();}, timeout: 500});});
+		$("#start").click(function(){var bla = $('#pwdbox').val();var qurl=sha512(bla)+"/start";$.ajax({url: qurl, success: function(data, status){}, error: function(){alert("Started!");}, timeout: 500});});
+		$("#stop").click(function(){var bla = $('#pwdbox').val();var qurl=sha512(bla)+"/stop";$.ajax({url: qurl, success: function(data, status){}, error: function(){alert("Stopped!");}, timeout: 500});});
+		$("#quit").click(function(){var bla = $('#pwdbox').val();var qurl=sha512(bla)+"/quit";$.ajax({url: qurl, success: function(data, status){}, error: function(){alert("Quit!");location.reload();}, timeout: 500});});
 		//Refresh
 		var old = "", logFile = "", refresh = function(){}, to;    
 		refresh = function(){
 			$.get(logFile, function(data, status){
 				if(old!=data) {
-					$("#viewer").html(old.replace(/\n/g, "<br />")+"<span style='color: red;'>"+data.replace(old,"").replace(/\n/g, "<br />")+"</span>");
+					$("#viewer").html(old.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, "<br />")+"<span style='color: red;'>"+data.replace(old,"").replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, "<br />")+"</span>");
 					old=data;
 				}
 			});
@@ -84,9 +99,11 @@
 		$(document).on("click", "a.loglink", function() { 
 			logFile = this.id;
 			clearTimeout(to);
-			$.ajax({url: logFile,success: function(data){old=data;$("#viewer").html(data.replace(/\n/g, "<br />"));},timeout: 500});
+			$.ajax({url: logFile,success: function(data){old=data;$("#viewer").html(data.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, "<br />"));},timeout: 500});
+			$("#logname").html("Currently viewing <a href=\""+logFile+"\">"+logFile+"</a>");
 			to = setTimeout(refresh, 1000);
 		});
+		$.ajax({url: "status", success: function(result){$("#statusd").removeClass().empty().addClass(result);}});
 	});
     </script>
   </body>
