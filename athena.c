@@ -35,7 +35,7 @@ char *ownernick = "ohnx";
 char *logdir = "irclogs/";
 char *partmsg = "You're gonna miss me when I'm gone";
 //SHA512 password hash so you don't have to store plaintext, online please enter the unhashed password - if you don't want to use sha512 and change it, please change client side as well!
-char *password = "";
+char *password = "redacted";
 int webport = 25568;
 
 struct {
@@ -52,8 +52,8 @@ struct {
         {"htm", "text/html" },
         {"html","text/html" },
         {"log","text/plain" },
-        {"css","text/css" },
-        {"js","text/javascript" },
+        {"css","text/css"   },
+        {"js","text/javascript"},
         {"ico","image/x-icon"},
         {0,0}
 };
@@ -120,10 +120,6 @@ void initpasswordstr() {
 	strcpy(quitstr, "GET /");
 	strcat(quitstr, password);
 	strcat(quitstr, "/quit\0");
-	passwordstr = malloc(sizeof(char)*(strlen(password)+6));
-	strcpy(passwordstr, "GET /");
-	strcat(passwordstr, password);
-	strcat(passwordstr, "\0");
 }
 static int *validip;
 
@@ -135,12 +131,12 @@ void logger(int type, char *s1, char *s2, int socket_fd) {
 	case ERROR: (void)sprintf(logbuffer,"[ERROR] %s:%s Errno=%d exiting pid=%d\n",s1, s2, errno,getpid());
 		break;
 	case FORBIDDEN:
-		(void)write(socket_fd, "HTTP/1.1 403 Forbidden\nContent-Length: 185\nConnection: close\nContent-Type: text/html\n\n<html><head>\n<title>403 Forbidden</title>\n</head><body>\n<h1>Forbidden</h1>\nThe requested URL, file type or operation is not allowed on this simple static file webserver.\n</body></html>\n",271);
-		(void)sprintf(logbuffer,"[FORBIDDEN] %s:%s\n",s1, s2);
+		(void)write(socket_fd, "HTTP/1.1 403 Forbidden\nContent-Length: 163\nConnection: close\nContent-Type: text/html\n\n<html><head>\n<title>403 Forbidden</title>\n</head><body>\n<h1>Forbidden</h1>\nThe requested URL, file type or operation is not allowed on this server.\n</body></html>\n",249);
+		(void)sprintf(logbuffer,"Forbidden (%s):%s\n",s1,s2);
 		break;
 	case NOTFOUND:
 		(void)write(socket_fd, "HTTP/1.1 404 Not Found\nContent-Length: 136\nConnection: close\nContent-Type: text/html\n\n<html><head>\n<title>404 Not Found</title>\n</head><body>\n<h1>Not Found</h1>\nThe requested URL was not found on this server.\n</body></html>\n",224);
-		(void)sprintf(logbuffer,"[NOT FOUND] %s:%s\n",s1, s2);
+		(void)sprintf(logbuffer,"Not Found(%s):%s\n",s1,s2);
 		break;
 	case INFO: (void)sprintf(logbuffer," INFO: %s:%s:%d\n",s1, s2,socket_fd); break;
 	case LOG: /*(void)sprintf(logbuffer," INFO: %s:%s:%d",s1, s2,socket_fd); */break;
@@ -154,7 +150,7 @@ void logger(int type, char *s1, char *s2, int socket_fd) {
 }
 
 //Child web handler
-void web(int fd, int hit) {
+void web(int fd, char *ipstr) {
 	int j, file_fd, buflen;
 	long i, ret, len;
 	char * fstr;
@@ -170,7 +166,7 @@ void web(int fd, int hit) {
 	for(i=0;i<ret;i++)	/* remove CF and LF characters */
 		if (buffer[i] == '\r' || buffer[i] == '\n')
 			buffer[i]='*';
-	logger(LOG,"request",buffer,hit);
+	//logger(LOG,"request",buffer,hit);
 	if ( strncmp(buffer,"GET ",4) && strncmp(buffer,"get ",4) ) {
 		logger(FORBIDDEN,"Only simple GET operation supported",buffer,fd);
 	}
@@ -187,12 +183,12 @@ void web(int fd, int hit) {
 
 	//Custom functions
 	if (!strncmp(&buffer[0],quitstr,strlen(quitstr))) {
-		logger(LOG,"Going down!","",0);
+		logger(INFO,"Going down!","",0);
 		kill(ircpid, SIGKILL);
 		kill(0, SIGKILL);
 		exit(1);
 	} else if (!strncmp(&buffer[0],"GET /list\0",10)) {
-		logger(LOG,"Listing files...","",0);
+		logger(INFO,"Listing files...","",0);
 		static char lfiles[BUFSIZE+1]; /* static so zero filled */
 		strcat(lfiles, "<ul>");
 		DIR *d;
@@ -220,29 +216,21 @@ void web(int fd, int hit) {
 		close(fd);
 		exit(1);
 	} else if (!strncmp(&buffer[0],stopstr,strlen(stopstr))) {
-		logger(LOG,"Killing IRC bot!","",ircpid);
+		logger(INFO,"Killing IRC bot!","",ircpid);
 		kill(webpid, SIGUSR2);
 		exit(1);
 	} else if (!strncmp(&buffer[0],startstr,strlen(startstr))) {
-		logger(LOG,"Starting IRC bot!","",0);
+		logger(INFO,"Starting IRC bot!","",0);
 		kill(webpid, SIGUSR1);//Raise SIGUSR1
 		exit(1);
 	} else if (!strncmp(&buffer[0],"GET /status\0",12)) {
-		logger(LOG,"Bot status","",0);
+		logger(INFO,"Bot status","",0);
 		static char result[8]; /* static so zero filled */
 		if(ircpid==0)
 			strcat(result, "botdown");
 		else
 			strcat(result, "botup");
 		(void)sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nConnection: close\nContent-Type: text/html\n\n%s", VERSION, strlen(result), result); /* Header + a blank line */
-		(void)write(fd, buffer, strlen(buffer));
-		sleep(1);	/* allow socket to drain before signalling the socket is closed */
-		close(fd);
-		exit(1);
-	} else if (!strncmp(&buffer[0],passwordstr,strlen(passwordstr))) {
-		//getpeername google it
-		//someone has successfully logged in
-		(void)sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: 3\nConnection: close\nContent-Type: text/html\n\nyes", VERSION);//nope
 		(void)write(fd, buffer, strlen(buffer));
 		sleep(1);	/* allow socket to drain before signalling the socket is closed */
 		close(fd);
@@ -262,16 +250,15 @@ void web(int fd, int hit) {
 			break;
 		}
 	}
-	if (fstr == 0) logger(FORBIDDEN,"file extension type not supported",buffer,fd);
+	if (fstr == 0) logger(FORBIDDEN,ipstr,buffer,fd);
 
 	if (( file_fd = open(&buffer[5],O_RDONLY)) == -1) {  /* open the file for reading */
-		logger(NOTFOUND, "failed to open file",&buffer[5],fd);
+		logger(NOTFOUND,ipstr,&buffer[5],fd);
 	}
 	//logger(LOG,"SEND",&buffer[5],hit);
 	len = (long)lseek(file_fd, (off_t)0, SEEK_END); /* lseek to the file end to find the length */
 	      (void)lseek(file_fd, (off_t)0, SEEK_SET); /* lseek back to the file start ready for reading */
           (void)sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nExpires: Thu, 19 Nov 1981 08:52:00 GMT\nCache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0\nPragma: no-cache\nContent-Length: %ld\nConnection: close\nContent-Type: %s\n\n", VERSION, len, fstr); /* Header + a blank line */
-
 	(void)write(fd,buffer,strlen(buffer));
 
 	/* send file in 8KB block - last block may be smaller */
@@ -361,6 +348,7 @@ int randint(int n) {
 }
 
 //checkip command too big
+const char *cookieType[8] = {"chocolate chip", "oatmeal raisin", "oatmeal chocolate", "oreo", "white chocolate macadamia nut", "peanut butter", "sugar", "ginger"};
 void demd5(char *check, char *ou);
 //Main IRC bot
 int ircmain() {
@@ -485,7 +473,7 @@ char *gameplayer;
 							message[ln] = '\0';
 							if (sw(message, "numguess")){}
 			    			else if (sw(message, "nick")){changenick(delPrefix(message, 4));}
-			    			else if (sw(message, "cmds")){say(user, "Management: help, join, part, raw, quit.");say(user, "Channel commands: kick, ban, unban, op, voice, deop, devoice.");say(user, "Misc commands: info, time, hug, slap, rr, 8ball, numguess.");}
+			    			else if (sw(message, "cmds")){say(user, "Management: help, join, part, raw, quit.");say(user, "Channel commands: kick, ban, unban, op, voice, deop, devoice.");say(user, "Misc commands: info, time, hug, slap, cookie, rr, 8ball, numguess.");}
 			    			else if (sw(message, "help gamemode")){say(where, "Game mode is when you do not have to type any prefixes. Anything you say is automatically part of the game.");}
 			    			else if (sw(message, "help")){say(where, "Hey there! I'm a simple IRC bot written in C.");say(where, "Want more help? Type ,cmds to see a list of my commands or ,info to get the link to my GitHub page.");}
 			    			else if (sw(message, "join")){if (strcmp(user, ownernick) == 0) {join(delPrefix(message, 4));} else say(where, "Nice try...");}
@@ -495,7 +483,8 @@ char *gameplayer;
 			    			else if (sw(message, "time")){say(where, getTime());}
 							else if (sw(message, "rr")){srand(time(NULL));int r = rand()%7;memset(minibuff, 0, 128);sprintf(minibuff, "loads the gun and aims it at %s", user);me(where, minibuff);sleep(1);switch(r){case 1:say(where, "The gun fires! :o");break;default:say(where, "The gun clicks. You're safe!");break;}}
 							else if (sw(message, "8ball")){srand(time(NULL));int r = rand()%3;switch(r){case 0:say(where, "The chances seem high.");break;case 1:say(where, "I don't know!");break;case 2:say(where, "nope.avi");break;}}
-			    			else if (sw(message, "hug")){memset(minibuff, 0, 128);*(message+strlen(message)-1)='\0';sprintf(minibuff, "hugs %s", delPrefix(message, 4));me(where, minibuff);}
+			    			else if (sw(message, "cookie")){srand(time(NULL));int r = rand()%8;memset(minibuff, 0, 128);sprintf(minibuff, "gives a %s cookie to %s", cookieType[r], user);me(target, minibuff);}
+                            else if (sw(message, "hug")){memset(minibuff, 0, 128);*(message+strlen(message)-1)='\0';sprintf(minibuff, "hugs %s", delPrefix(message, 4));me(where, minibuff);}
 			    			else if (sw(message, "slap")){memset(minibuff, 0, 128);*(message+strlen(message)-1)='\0';sprintf(minibuff, "slaps %s", delPrefix(message, 5));me(where, minibuff);}
 							else if (sw(message, "unban")){if (strcmp(user, ownernick) == 0) {memset(minibuff, 0, 128);sprintf(minibuff, "MODE %s -b %s\r\n", where, delPrefix(message, 6));raw(minibuff);} else say(where, "Nice try...");}
 							else if (sw(message, "ban")){if (strcmp(user, ownernick) == 0) {memset(minibuff, 0, 128);sprintf(minibuff, "MODE %s +b %s\r\n", where, delPrefix(message, 4));raw(minibuff);} else say(where, "Nice try...");}
@@ -596,9 +585,6 @@ int main() {
 	}
 	//init password string
 	initpasswordstr();
-	//shared memory for allowed ip
-	//validip = mmap(NULL, sizeof *validip, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    //*validip = 1;
 	//Random seed
 	srand(time(NULL));
 	if (fork()==0) {
@@ -610,7 +596,7 @@ int main() {
 		}
 		int i, pid, listenfd, socketfd, hit;
 		socklen_t length;
-		static struct sockaddr_in cli_addr; /* static = initialised to zeros */
+		static struct sockaddr_storage cli_addr; /* static = initialised to zeros */
 		static struct sockaddr_in serv_addr; /* static = initialised to zeros */
 		/* Become deamon + unstopable and no zombies children (= no wait()) */
 		(void)signal(SIGCLD, SIG_IGN); /* ignore child death */
@@ -651,7 +637,18 @@ int main() {
 			} else {
 				if (pid == 0) { 	/* child */
 					(void)close(listenfd);
-					web(socketfd,hit); /* never returns */
+                    char ipstr[INET6_ADDRSTRLEN + 1];
+                    int ipport = 0;
+                    if (cli_addr.ss_family == AF_INET) {
+                        struct sockaddr_in *s = (struct sockaddr_in *)&cli_addr;
+                        ipport = ntohs(s->sin_port);
+                        inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
+                    } else { // AF_INET6
+                        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&cli_addr;
+                        ipport = ntohs(s->sin6_port);
+                        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
+                    }
+					web(socketfd,ipstr); /* never returns */
 				} else { 	/* parent */
 					(void)close(socketfd);
 				}
